@@ -86,7 +86,7 @@ public class EpgSyncTask implements HtspMessage.Listener, Authenticator.Listener
     private static final String PROGRAM_START_TIME_KEY = "start";
     private static final String PROGRAM_FINISH_TIME_KEY = "stop";
     private static final String PROGRAM_SEASON_NUMBER_KEY = "seasonNumber";
-    private static final String PROGRAM_EPISODE_NUMBER_KEY = "episodeNumber";
+    private static final String PROGRAM_EPISODE_NUMBER_KEY = "episodeOnscreen";
     private static final String PROGRAM_IMAGE = "image";
 
     private static final String DVR_ENTRY_ID_KEY = "id";
@@ -809,12 +809,30 @@ public class EpgSyncTask implements HtspMessage.Listener, Authenticator.Listener
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (message.containsKey(PROGRAM_SEASON_NUMBER_KEY)) {
-                values.put(TvContract.Programs.COLUMN_SEASON_DISPLAY_NUMBER, message.getInteger(PROGRAM_SEASON_NUMBER_KEY));
-            }
-
             if (message.containsKey(PROGRAM_EPISODE_NUMBER_KEY)) {
-                values.put(TvContract.Programs.COLUMN_EPISODE_DISPLAY_NUMBER, message.getInteger(PROGRAM_EPISODE_NUMBER_KEY));
+                if (!message.getString(PROGRAM_EPISODE_NUMBER_KEY).contains("|") && message.getString(PROGRAM_EPISODE_NUMBER_KEY) != null) {
+                    String fullMessage = message.getString(PROGRAM_EPISODE_NUMBER_KEY);
+                    try {
+                        if (fullMessage.startsWith("S") && fullMessage.contains(" ")) {
+                            String season = fullMessage.split(" ")[0].replace("S", "");
+                            String episode = fullMessage.split(" ")[1].replace("E", "");
+                            values.put(TvContract.Programs.COLUMN_SEASON_DISPLAY_NUMBER, season);
+                            values.put(TvContract.Programs.COLUMN_EPISODE_DISPLAY_NUMBER, episode);
+                        }
+                        else if (fullMessage.startsWith("E")) {
+                            String season = "1";
+                            String episode = fullMessage.replace("E", "");
+                            values.put(TvContract.Programs.COLUMN_SEASON_DISPLAY_NUMBER, season);
+                            values.put(TvContract.Programs.COLUMN_EPISODE_DISPLAY_NUMBER, episode);
+                        }
+                    }
+                    catch (Exception e) {
+                        Log.d("ok", fullMessage);
+                    }
+
+
+                }
+
             }
         } else {
             if (message.containsKey(PROGRAM_SEASON_NUMBER_KEY)) {

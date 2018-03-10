@@ -25,6 +25,8 @@ import android.media.tv.TvContract;
 import android.media.tv.TvTrackInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.util.SparseArray;
@@ -69,8 +71,11 @@ import com.google.android.exoplayer2.util.MimeTypes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import ie.macinnes.htsp.HtspMessage;
+import ie.macinnes.htsp.HtspNotConnectedException;
 import ie.macinnes.htsp.SimpleHtspConnection;
 import ie.macinnes.tvheadend.Constants;
 import ie.macinnes.tvheadend.R;
@@ -460,6 +465,27 @@ public class TvheadendPlayer implements Player.EventListener {
 
     private void buildHtspRecordingMediaSource(Uri recordingUri) {
         // This is the MediaSource representing the media to be played.
+        HashMap<String, HashMap<String, String>> items = new HashMap<>();
+        HashMap<String, String> id = new HashMap<>();
+        id.put("id", recordingUri.toString().replace("htsp://dvrfile/", ""));
+        items.put("getDvrCutpoints", id);
+        HtspMessage message = new HtspMessage(items);
+        try {
+            mConnection.getMessageDispatcher().addMessageListener(new HtspMessage.Listener() {
+                @Override
+                public Handler getHandler() {
+                    return null;
+                }
+
+                @Override
+                public void onMessage(@NonNull HtspMessage htspMessage) {
+                    Log.d("Messages", htspMessage.toString());
+                }
+            });
+            mConnection.getMessageDispatcher().sendMessage(message);
+        } catch (HtspNotConnectedException e) {
+            e.printStackTrace();
+        }
         mMediaSource = new ExtractorMediaSource(recordingUri,
                 mHtspFileInputStreamDataSourceFactory, mExtractorsFactory, null, mEventLogger);
     }
